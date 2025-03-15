@@ -1,0 +1,53 @@
+plugins {
+    id('java')
+    id('war')
+    id('io.openliberty.tools.gradle.Liberty') version '3.9.2'
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+  jdbcLib
+}
+
+dependencies {
+    providedCompile('jakarta.platform:jakarta.jakartaee-api:10.0.0')
+    jdbcLib('com.mysql:mysql-connector-j:9.2.0')
+    compileOnly('org.eclipse.microprofile:microprofile:7.0')
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+task openBrowser {
+    description = 'Open browser to the running application'
+    doLast {
+        String port = liberty.server.var.'http.port'
+        String context = liberty.server.var.'app.context.root'
+        String URL = "http://localhost:" + port + "/" + context + "/"
+        java.awt.Desktop.desktop.browse URL.toURI()
+    }
+}
+
+task copyJDBC(type: Copy) {
+  from configurations.jdbcLib
+  into "$buildDir/wlp/usr/servers/defaultServer/jdbc"
+  include '*.jar'
+}
+
+ext  {
+    liberty.server.var.'http.port' = '9080'
+    liberty.server.var.'https.port' = '9443'
+    liberty.server.var.'app.context.root' = project.name
+}
+
+clean.dependsOn 'libertyStop'
+deploy.dependsOn 'copyJDBC'
